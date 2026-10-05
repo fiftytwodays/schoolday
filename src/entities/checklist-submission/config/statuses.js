@@ -1,9 +1,11 @@
 import { Tag } from "antd";
 import dayjs from "dayjs";
 
-// NOT_STARTED is not stored: it is a due checklist with no submission yet.
+// NOT_STARTED and MISSED are not stored: a due checklist with no submission
+// yet, and one whose day or week ended without one.
 export const STATUS_LABELS = {
   NOT_STARTED: "Not started",
+  MISSED: "Not submitted",
   IN_PROGRESS: "In progress",
   SUBMITTED: "Waiting for review",
   RETURNED: "Sent back",
@@ -12,6 +14,7 @@ export const STATUS_LABELS = {
 
 const STATUS_COLORS = {
   NOT_STARTED: "default",
+  MISSED: "volcano",
   IN_PROGRESS: "processing",
   SUBMITTED: "warning",
   RETURNED: "error",

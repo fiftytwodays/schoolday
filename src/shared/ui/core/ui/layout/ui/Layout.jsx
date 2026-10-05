@@ -29,6 +29,7 @@ const items = [
         visibleWhen: (user) => user.isAdmin || user.isCoordinator,
       },
       link("checklists", "/checklists", "Manage checklists"),
+      link("checklist-progress", "/checklist-progress", "Progress"),
     ],
   },
   {

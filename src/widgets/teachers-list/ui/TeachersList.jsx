@@ -78,7 +78,7 @@ function TeachersList() {
     getRecords: getAllTeachers,
     createRecord: createTeacher,
     updateRecord: async (id, values, teacher) => {
-      await updateTeacher(id, values);
+      await updateTeacher(id, values, teacher);
       // A linked login uses the teacher's name, so rename it too.
       const login = loginFor(teacher);
       if (login && values.name !== teacher.name) {

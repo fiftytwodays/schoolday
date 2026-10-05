@@ -52,7 +52,7 @@ Sign in with that username and temporary password; you are asked to choose a new
 | Role | Can do |
 | --- | --- |
 | `ADMIN` | Everything: the school setup, timetables, checklists and logins. |
-| `TEACHER` | View the class, students and teachers timetables and the school calendar, and fill in their checklists. |
+| `TEACHER` | View the class, students and teachers timetables and the school calendar, fill in their checklists, and review the checklists of the teachers they coordinate. |
 
 Users sign in with their **username**, or with their **email** if they have one. An email address is optional: if one is set, Cognito also emails the invitation and the user can reset their own password with "Forgot your password?". Each email can belong to only one login.
 
@@ -67,7 +67,7 @@ Admins cannot delete, disable or demote their own account.
 
 The menu is grouped by what people do; each user only sees the pages they can open:
 
-- **Checklists**: My checklists, and for admins Manage checklists.
+- **Checklists**: My checklists, Reviews (admins and coordinators), and for admins Manage checklists.
 - **Timetables**: the class, students and teachers timetables, and for admins Create timetable and Timetable entries.
 - **Calendar**: the school calendar.
 - **Setup** (admins): School, Teachers, Subjects, Classes, Periods, Teaching assignments and Users.
@@ -94,9 +94,17 @@ How far back teachers can fill in checklists is set on the **School** page: a nu
 
 Teachers fill in their checklists on the **My checklists** page (admins linked to a teacher can too). It lists the checklists due on the chosen day, today by default, from each checklist's start date: daily checklists on school days, weekly checklists (Monday to Sunday) in weeks with a school day, and one-time checklists always. For each one the teacher ticks the activities they completed and can add a comment to each; an activity that is not ticked needs a comment before the checklist can be submitted. Progress can be saved and finished later. Checklists to do come first; those that can no longer be filled in and have nothing saved are hidden behind a switch.
 
-When a checklist is submitted, it waits for the teacher's coordinator to review it. A teacher without a coordinator (or whose coordinator has no login) is reviewed automatically. Filling in a day or week after it ended is allowed within the configured limit and marks the submission **Late**. The **History** tab lists past submissions with their status, reviewer and timeline.
+When a checklist is submitted, it waits for the teacher's coordinator to review it. A teacher without a coordinator (or whose coordinator has no login) is reviewed automatically. A checklist that is sent back can be changed and submitted again. Filling in a day or week after it ended is allowed within the configured limit and marks the submission **Late**. The **History** tab lists past submissions with their status, reviewer and timeline.
 
 Submissions are only written by the `checklist-workflow` function ([amplify/functions/checklist-workflow](amplify/functions/checklist-workflow)), which checks the rules shared with the app ([src/shared/lib/checklist-rules.js](src/shared/lib/checklist-rules.js)). A submission can be read by admins, the teacher, and their coordinator. The checklist's activities, title and the teacher's name are copied into each submission, so it stays readable after the checklist changes. When deleting a teacher or a checklist that has submissions, admins choose whether to also delete them or keep them as history.
+
+### Reviewing checklists
+
+Coordinators review their teachers' checklists on the **Reviews** page, which appears in the Checklists menu for admins and for teachers who coordinate someone. **Waiting for review** lists submitted checklists, oldest first; **Reviewed and sent back** lists past decisions. Both can be filtered by teacher and checklist, and admins can switch between their own teachers and all teachers.
+
+Opening a checklist shows the activities done and not done with the teacher's comments, and its history. The coordinator can **Mark reviewed**, with an optional comment, or **Send back** with a comment explaining what to change; the teacher sees the comment on My checklists. Only the teacher's coordinator or an admin can review a checklist.
+
+When a teacher's coordinator changes, the checklists waiting for review move to the new coordinator. When the teacher is left without a coordinator with a login (the coordinator is removed, deleted or loses their login), the waiting checklists are reviewed automatically.
 
 ### School calendar
 

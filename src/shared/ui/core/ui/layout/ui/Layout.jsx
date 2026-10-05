@@ -15,13 +15,19 @@ const link = (key, href, label) => ({
 });
 
 // Grouped by what people do. Pages a user cannot open are left out, so
-// teachers see Checklists, Timetables and Calendar.
+// teachers see Checklists, Timetables and Calendar, and Reviews only when
+// they coordinate other teachers.
 const items = [
   {
     key: "checklists-menu",
     label: "Checklists",
     children: [
       link("my-checklists", "/my-checklists", "My checklists"),
+      {
+        ...link("reviews", "/reviews", "Reviews"),
+        // Only coordinators have teachers' checklists to review.
+        visibleWhen: (user) => user.isAdmin || user.isCoordinator,
+      },
       link("checklists", "/checklists", "Manage checklists"),
     ],
   },
@@ -56,7 +62,7 @@ const items = [
 // Keeps only the pages the user can open, dropping groups left empty.
 const filterItems = (menuItems, currentUser) =>
   menuItems
-    .map(({ href, children, adminOnly, ...item }) => {
+    .map(({ href, children, adminOnly, visibleWhen, ...item }) => {
       if (item.type === "divider") {
         return !adminOnly || currentUser.isAdmin ? item : null;
       }
@@ -64,7 +70,8 @@ const filterItems = (menuItems, currentUser) =>
         const visible = filterItems(children, currentUser);
         return visible.length > 0 ? { ...item, children: visible } : null;
       }
-      return canAccess(href, currentUser) ? item : null;
+      const isVisible = !visibleWhen || visibleWhen(currentUser);
+      return isVisible && canAccess(href, currentUser) ? item : null;
     })
     .filter(Boolean);
 

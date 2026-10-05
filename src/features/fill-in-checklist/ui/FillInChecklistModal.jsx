@@ -7,14 +7,16 @@ import {
   Input,
   Modal,
   Space,
-  Timeline,
   Typography,
   message,
 } from "antd";
-import dayjs from "dayjs";
 
-import { LateTag, StatusTag } from "@/entities/checklist-submission";
-import { EVENT_LABELS } from "@/entities/checklist-submission/config/statuses";
+import {
+  LateTag,
+  StatusTag,
+  SubmissionItems,
+  SubmissionTimeline,
+} from "@/entities/checklist-submission";
 import { saveSubmission } from "@/entities/checklist-submission/api/save-submission";
 import {
   EDITABLE_STATUSES,
@@ -52,37 +54,6 @@ function ReviewComment({ submission }) {
       }`}
       description={submission.reviewComment}
     />
-  );
-}
-
-function History({ events }) {
-  if (!events?.length) {
-    return null;
-  }
-  return (
-    <>
-      <Typography.Title level={5} style={{ margin: 0 }}>
-        History
-      </Typography.Title>
-      <Timeline
-        items={events.map((event) => ({
-          children: (
-            <>
-              <div>
-                {EVENT_LABELS[event.type] || event.type}
-                {event.by && event.type !== "AUTO_REVIEWED"
-                  ? ` by ${event.by}`
-                  : ""}
-              </div>
-              <Typography.Text type="secondary">
-                {dayjs(event.at).format("D MMM YYYY, h:mm A")}
-              </Typography.Text>
-              {event.comment && <div>&ldquo;{event.comment}&rdquo;</div>}
-            </>
-          ),
-        }))}
-      />
-    </>
   );
 }
 
@@ -206,60 +177,47 @@ function FillInChecklistModal({
             required for any activity you did not complete.
           </Typography.Text>
         )}
-        <Flex vertical gap="small">
-          {rows.map((row) => {
-            const hasError = showErrors && missing.has(row.itemId);
-            return (
-              <Flex key={row.itemId} vertical gap={4}>
-                <Checkbox
-                  checked={row.done}
-                  disabled={!isEditable}
-                  onChange={(event) =>
-                    updateRow(row.itemId, { done: event.target.checked })
-                  }
-                >
-                  {row.title}
-                </Checkbox>
-                {isEditable ? (
-                  <>
-                    <Input.TextArea
-                      value={row.comment}
-                      autoSize={{ minRows: 1, maxRows: 4 }}
-                      status={hasError ? "error" : undefined}
-                      placeholder={
-                        row.done
-                          ? "Comment (optional)"
-                          : "Why was this not done? (required to submit)"
-                      }
-                      onChange={(event) =>
-                        updateRow(row.itemId, { comment: event.target.value })
-                      }
-                      style={{ marginLeft: 24, width: "calc(100% - 24px)" }}
-                    />
-                    {hasError && (
-                      <Typography.Text
-                        type="danger"
-                        style={{ marginLeft: 24 }}
-                      >
-                        Please add a comment
-                      </Typography.Text>
-                    )}
-                  </>
-                ) : (
-                  row.comment && (
-                    <Typography.Text
-                      type="secondary"
-                      style={{ marginLeft: 24 }}
-                    >
-                      {row.comment}
+        {isEditable ? (
+          <Flex vertical gap="small">
+            {rows.map((row) => {
+              const hasError = showErrors && missing.has(row.itemId);
+              return (
+                <Flex key={row.itemId} vertical gap={4}>
+                  <Checkbox
+                    checked={row.done}
+                    onChange={(event) =>
+                      updateRow(row.itemId, { done: event.target.checked })
+                    }
+                  >
+                    {row.title}
+                  </Checkbox>
+                  <Input.TextArea
+                    value={row.comment}
+                    autoSize={{ minRows: 1, maxRows: 4 }}
+                    status={hasError ? "error" : undefined}
+                    placeholder={
+                      row.done
+                        ? "Comment (optional)"
+                        : "Why was this not done? (required to submit)"
+                    }
+                    onChange={(event) =>
+                      updateRow(row.itemId, { comment: event.target.value })
+                    }
+                    style={{ marginLeft: 24, width: "calc(100% - 24px)" }}
+                  />
+                  {hasError && (
+                    <Typography.Text type="danger" style={{ marginLeft: 24 }}>
+                      Please add a comment
                     </Typography.Text>
-                  )
-                )}
-              </Flex>
-            );
-          })}
-        </Flex>
-        <History events={submission?.events} />
+                  )}
+                </Flex>
+              );
+            })}
+          </Flex>
+        ) : (
+          <SubmissionItems items={rows} />
+        )}
+        <SubmissionTimeline events={submission?.events} />
       </Flex>
     </Modal>
   );

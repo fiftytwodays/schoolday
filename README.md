@@ -67,7 +67,7 @@ Admins cannot delete, disable or demote their own account.
 
 The menu is grouped by what people do; each user only sees the pages they can open:
 
-- **Checklists**: My checklists, Reviews (admins and coordinators), and for admins Manage checklists.
+- **Checklists**: My checklists, Reviews (admins and coordinators), and for admins Manage checklists and Progress.
 - **Timetables**: the class, students and teachers timetables, and for admins Create timetable and Timetable entries.
 - **Calendar**: the school calendar.
 - **Setup** (admins): School, Teachers, Subjects, Classes, Periods, Teaching assignments and Users.
@@ -105,6 +105,15 @@ Coordinators review their teachers' checklists on the **Reviews** page, which ap
 Opening a checklist shows the activities done and not done with the teacher's comments, and its history. The coordinator can **Mark reviewed**, with an optional comment, or **Send back** with a comment explaining what to change; the teacher sees the comment on My checklists. Only the teacher's coordinator or an admin can review a checklist.
 
 When a teacher's coordinator changes, the checklists waiting for review move to the new coordinator. When the teacher is left without a coordinator with a login (the coordinator is removed, deleted or loses their login), the waiting checklists are reviewed automatically.
+
+### Checklist progress
+
+Admins follow completion on the **Progress** page (Checklists menu). Choose daily, weekly or one-time checklists and a day (a weekly checklist shows the week containing it); every assigned teacher of every checklist due then is listed with its status, filterable by teacher, checklist and status, with a count per status:
+
+- **Not submitted**: the day or week has ended with nothing submitted.
+- **Not started**, **In progress**, **Sent back**, **Waiting for review** and **Reviewed** (or Auto-reviewed), with **Late** marking checklists filled in after their day or week.
+
+Admins can open any submission and review it. The **All submissions** tab lists every submission, including those kept as history after their teacher or checklist was deleted, marked "(deleted)".
 
 ### School calendar
 

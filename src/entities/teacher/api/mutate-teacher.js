@@ -16,9 +16,33 @@ const withCoordinator = (values) =>
     ? { ...values, coordinatorId: values.coordinatorId || null }
     : values;
 
+/**
+ * Moves checklists waiting for review to the teachers' current
+ * coordinators, or reviews them automatically when there is none with a
+ * login. Needed after a coordinator or a login changes.
+ */
+export const syncChecklistReviewers = async () =>
+  unwrap(await client.mutations.syncChecklistReviewers());
+
+const sameCoordinator = (values, teacher) =>
+  (values.coordinatorId || null) === (teacher?.coordinatorId || null);
+
 export const createTeacher = (values) => create(withCoordinator(values));
 
-export const updateTeacher = (id, values) => update(id, withCoordinator(values));
+/**
+ * Pass the current `teacher` when the coordinator may change, so waiting
+ * reviews follow it. Removing a login (`userId: null`) also moves the
+ * reviews of the teachers they coordinate.
+ */
+export const updateTeacher = async (id, values, teacher) => {
+  const updated = await update(id, withCoordinator(values));
+  const coordinatorChanged =
+    "coordinatorId" in values && !sameCoordinator(values, teacher);
+  if (coordinatorChanged || values.userId === null) {
+    await syncChecklistReviewers();
+  }
+  return updated;
+};
 
 // Checklist assignments only describe who does a checklist, so they are
 // removed with the teacher instead of blocking the delete.
@@ -63,5 +87,8 @@ export const deleteTeacher = async (id, { deleteSubmissions = false } = {}) => {
   if (deleteSubmissions) {
     await deleteWhere("ChecklistSubmission", { teacherId: { eq: id } });
   }
-  return remove(id);
+  const removed = await remove(id);
+  // Their teachers' waiting reviews, and their own kept ones, are settled.
+  await syncChecklistReviewers();
+  return removed;
 };

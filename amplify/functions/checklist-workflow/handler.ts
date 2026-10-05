@@ -32,9 +32,16 @@ type Item = {
 };
 
 type Event = {
-  type: "SUBMITTED" | "RESUBMITTED" | "AUTO_REVIEWED" | "RETURNED" | "REVIEWED";
+  type:
+    | "SUBMITTED"
+    | "RESUBMITTED"
+    | "AUTO_REVIEWED"
+    | "REASSIGNED"
+    | "RETURNED"
+    | "REVIEWED";
   at: string;
-  by: string;
+  // Empty for changes SchoolDay makes itself.
+  by: string | null;
   comment?: string | null;
 };
 
@@ -45,12 +52,47 @@ type SaveArguments = {
   submit: boolean;
 };
 
+type ReviewArguments = {
+  submissionId: string;
+  decision: string;
+  comment?: string | null;
+};
+
 // The payload Amplify's function resolver sends.
 type ResolverEvent = {
   fieldName: string;
-  arguments: SaveArguments;
+  arguments: Record<string, unknown>;
   identity: AppSyncIdentityCognito | null;
 };
+
+type Teacher = {
+  id: string;
+  name?: string | null;
+  userId?: string | null;
+};
+
+const isAdmin = (identity: AppSyncIdentityCognito) =>
+  (identity.groups ?? []).includes("ADMIN");
+
+// Submission fields for a coordinator who will review it.
+const assignTo = (coordinator: Teacher) => ({
+  status: "SUBMITTED",
+  coordinatorId: coordinator.id,
+  coordinatorUserId: coordinator.userId,
+  coordinatorName: coordinator.name,
+  autoReviewed: false,
+});
+
+// Submission fields when there is no coordinator (with a login) to review it.
+const autoReview = (now: string) => ({
+  status: "REVIEWED",
+  coordinatorId: null,
+  coordinatorUserId: null,
+  coordinatorName: null,
+  autoReviewed: true,
+  reviewedAt: now,
+  reviewedBy: null,
+});
 
 type Response<T> = {
   data: T;
@@ -249,12 +291,10 @@ const saveChecklist = async (
     const coordinator = teacher.coordinatorId
       ? unwrap(await client.models.Teacher.get({ id: teacher.coordinatorId }))
       : null;
-    const by = teacher.name ?? identity.username;
-
     events.push({
       type: existing?.status === "RETURNED" ? "RESUBMITTED" : "SUBMITTED",
       at: now,
-      by,
+      by: teacher.name ?? identity.username,
     });
     Object.assign(fields, {
       submittedAt: now,
@@ -263,24 +303,10 @@ const saveChecklist = async (
     });
 
     if (coordinator?.userId) {
-      Object.assign(fields, {
-        status: "SUBMITTED",
-        coordinatorId: coordinator.id,
-        coordinatorUserId: coordinator.userId,
-        coordinatorName: coordinator.name,
-        autoReviewed: false,
-      });
+      Object.assign(fields, assignTo(coordinator));
     } else {
-      events.push({ type: "AUTO_REVIEWED", at: now, by: "SchoolDay" });
-      Object.assign(fields, {
-        status: "REVIEWED",
-        coordinatorId: null,
-        coordinatorUserId: null,
-        coordinatorName: null,
-        autoReviewed: true,
-        reviewedAt: now,
-        reviewedBy: null,
-      });
+      events.push({ type: "AUTO_REVIEWED", at: now, by: null });
+      Object.assign(fields, autoReview(now));
     }
   }
   fields.events = JSON.stringify(events);
@@ -291,12 +317,144 @@ const saveChecklist = async (
   return unwrap(saved);
 };
 
+/**
+ * Marks a submitted checklist reviewed, or sends it back with a comment.
+ * Only the submission's coordinator or an admin can.
+ */
+const reviewChecklist = async (
+  { submissionId: id, decision, comment }: ReviewArguments,
+  identity: AppSyncIdentityCognito
+) => {
+  if (decision !== "REVIEWED" && decision !== "RETURNED") {
+    throw new Error("The decision must be REVIEWED or RETURNED.");
+  }
+  const trimmedComment = comment?.trim() || null;
+  if (decision === "RETURNED" && !trimmedComment) {
+    throw new Error("Add a comment explaining what to change.");
+  }
+
+  const submission = unwrap(await client.models.ChecklistSubmission.get({ id }));
+  if (!submission) {
+    throw new Error("This checklist submission no longer exists.");
+  }
+  if (submission.coordinatorUserId !== identity.sub && !isAdmin(identity)) {
+    throw new Error("Only the teacher's coordinator or an admin can review it.");
+  }
+  if (submission.status !== "SUBMITTED") {
+    throw new Error("This checklist is not waiting for review.");
+  }
+
+  const [reviewer] = await listAll((options) =>
+    client.models.Teacher.list({
+      ...options,
+      filter: { userId: { eq: identity.sub } },
+    })
+  );
+  const by = reviewer?.name ?? identity.username;
+  const now = new Date().toISOString();
+  const events = parseJson<Event[]>(submission.events, []);
+  events.push({ type: decision, at: now, by, comment: trimmedComment });
+
+  return unwrap(
+    await client.models.ChecklistSubmission.update({
+      id,
+      status: decision,
+      reviewedAt: now,
+      reviewedBy: by,
+      reviewComment: trimmedComment,
+      events: JSON.stringify(events),
+    } as never)
+  );
+};
+
+/**
+ * Brings checklists waiting for review in line with the teachers'
+ * coordinators, after a coordinator or a login changes: they move to the
+ * teacher's current coordinator, or are reviewed automatically when the
+ * teacher has no coordinator with a login. Admins only.
+ */
+const syncChecklistReviewers = async (identity: AppSyncIdentityCognito) => {
+  if (!isAdmin(identity)) {
+    throw new Error("Only admins can do this.");
+  }
+
+  const [waiting, teachers] = await Promise.all([
+    listAll((options) =>
+      client.models.ChecklistSubmission.list({
+        ...options,
+        filter: { status: { eq: "SUBMITTED" } },
+      })
+    ),
+    listAll((options) => client.models.Teacher.list(options)),
+  ]);
+  const teachersById = new Map(
+    teachers.map((teacher) => [teacher.id, teacher])
+  );
+
+  let reassigned = 0;
+  let autoReviewed = 0;
+  const now = new Date().toISOString();
+
+  for (const submission of waiting) {
+    const teacher = teachersById.get(submission.teacherId);
+    const coordinator = teacher?.coordinatorId
+      ? teachersById.get(teacher.coordinatorId)
+      : undefined;
+    const events = parseJson<Event[]>(submission.events, []);
+    let fields: Record<string, unknown>;
+
+    if (coordinator?.userId) {
+      if (
+        submission.coordinatorId === coordinator.id &&
+        submission.coordinatorUserId === coordinator.userId
+      ) {
+        continue;
+      }
+      events.push({
+        type: "REASSIGNED",
+        at: now,
+        by: null,
+        comment: `Now reviewed by ${coordinator.name}`,
+      });
+      fields = assignTo(coordinator);
+      reassigned++;
+    } else {
+      events.push({ type: "AUTO_REVIEWED", at: now, by: null });
+      fields = autoReview(now);
+      autoReviewed++;
+    }
+
+    unwrap(
+      await client.models.ChecklistSubmission.update({
+        id: submission.id,
+        ...fields,
+        events: JSON.stringify(events),
+      } as never)
+    );
+  }
+
+  return { reassigned, autoReviewed };
+};
+
 export const handler = async (event: ResolverEvent) => {
-  if (!event.identity?.sub) {
+  const { identity } = event;
+  if (!identity?.sub) {
     throw new Error("You must be signed in.");
   }
-  if (event.fieldName === "saveChecklist") {
-    return saveChecklist(event.arguments, event.identity);
+  switch (event.fieldName) {
+    case "saveChecklist":
+      return saveChecklist(
+        event.arguments as unknown as SaveArguments,
+        identity
+      );
+    case "reviewChecklist":
+      return reviewChecklist(
+        event.arguments as unknown as ReviewArguments,
+        identity
+      );
+    case "syncChecklistReviewers":
+      return syncChecklistReviewers(identity);
+    default:
+      throw new Error(`Unknown operation ${event.fieldName}`);
   }
-  throw new Error(`Unknown operation ${event.fieldName}`);
 };

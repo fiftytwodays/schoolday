@@ -11,6 +11,7 @@ import "@/styles/globals.css";
 import { AppLayout } from "@/shared/ui/core/ui/layout";
 import { canAccess } from "@/shared/lib/access";
 import useCurrentUser from "@/shared/lib/use-current-user";
+import useMyTeacher from "@/entities/teacher/lib/use-my-teacher";
 import EnsureInitialData from "@/components/EnsureInitialData";
 
 // Users can sign in with their username or, if they have one, their email.
@@ -32,6 +33,7 @@ const SIGN_IN_FORM_FIELDS = {
 function SignedInApp({ Component, pageProps, signOut }) {
   const router = useRouter();
   const currentUser = useCurrentUser();
+  const { isCoordinator } = useMyTeacher();
 
   // Clear cached data so the next account to sign in starts fresh.
   const onSignOut = () => {
@@ -61,7 +63,10 @@ function SignedInApp({ Component, pageProps, signOut }) {
   }
 
   return (
-    <AppLayout onSignOut={onSignOut} currentUser={currentUser}>
+    <AppLayout
+      onSignOut={onSignOut}
+      currentUser={{ ...currentUser, isCoordinator }}
+    >
       {currentUser.isAdmin && <EnsureInitialData />}
       {content}
     </AppLayout>

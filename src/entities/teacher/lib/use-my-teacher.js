@@ -4,8 +4,9 @@ import useCurrentUser from "@/shared/lib/use-current-user";
 import { getAllTeachers } from "../api/get-teachers";
 
 /**
- * The teacher linked to the signed-in login, or null if there is none.
- * `isLoading` is true until both are known.
+ * The teacher linked to the signed-in login, or null if there is none, and
+ * whether they coordinate other teachers. `isLoading` is true until both
+ * are known.
  */
 export default function useMyTeacher() {
   const currentUser = useCurrentUser();
@@ -16,5 +17,9 @@ export default function useMyTeacher() {
     teachers?.find((candidate) => candidate.userId === currentUser.userId) ??
     null;
 
-  return { teacher, isLoading, error, currentUser };
+  const isCoordinator = Boolean(
+    teacher && teachers?.some((other) => other.coordinatorId === teacher.id)
+  );
+
+  return { teacher, isCoordinator, isLoading, error, currentUser };
 }

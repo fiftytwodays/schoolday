@@ -182,6 +182,29 @@ const schema = a
       .authorization((allow) => [allow.groups(["ADMIN", "TEACHER"])])
       .handler(a.handler.function(checklistWorkflow)),
 
+    // Marks a submitted checklist reviewed, or sends it back (a comment is
+    // required). Only its coordinator or an admin can. Returns it.
+    reviewChecklist: a
+      .mutation()
+      .arguments({
+        submissionId: a.id().required(),
+        // "REVIEWED" or "RETURNED"
+        decision: a.string().required(),
+        comment: a.string(),
+      })
+      .returns(a.json())
+      .authorization((allow) => [allow.groups(["ADMIN", "TEACHER"])])
+      .handler(a.handler.function(checklistWorkflow)),
+
+    // Moves checklists waiting for review to the teachers' current
+    // coordinators, or reviews them automatically when there is none with a
+    // login. Run after a coordinator or a login changes.
+    syncChecklistReviewers: a
+      .mutation()
+      .returns(a.json())
+      .authorization((allow) => [allow.group("ADMIN")])
+      .handler(a.handler.function(checklistWorkflow)),
+
     // A Cognito user; `id` is the username.
     User: a.customType({
       id: a.string().required(),

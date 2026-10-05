@@ -43,6 +43,7 @@ export const EVENT_LABELS = {
   SUBMITTED: "Submitted",
   RESUBMITTED: "Submitted again",
   AUTO_REVIEWED: "Reviewed automatically (no coordinator)",
+  REASSIGNED: "Moved to a new coordinator",
   RETURNED: "Sent back",
   REVIEWED: "Reviewed",
 };

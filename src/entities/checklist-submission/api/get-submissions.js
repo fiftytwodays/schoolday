@@ -12,5 +12,22 @@ const getSubmissions = async (filter) => {
 export const getTeacherSubmissions = (teacherId) =>
   getSubmissions({ teacherId: { eq: teacherId } });
 
+// Submitted to a coordinator: waiting, sent back or reviewed by a person.
+const isForReview = (submission) =>
+  submission.status !== "IN_PROGRESS" && !submission.autoReviewed;
+
+/**
+ * Submissions a coordinator reviews, or everyone's for admins when
+ * `coordinatorUserId` is empty.
+ */
+export const getReviewSubmissions = async (coordinatorUserId) =>
+  (
+    await getSubmissions(
+      coordinatorUserId
+        ? { coordinatorUserId: { eq: coordinatorUserId } }
+        : undefined
+    )
+  ).filter(isForReview);
+
 /** Every submission; admins only. */
 export const getAllSubmissions = () => getSubmissions();

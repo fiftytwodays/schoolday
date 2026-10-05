@@ -42,6 +42,7 @@ const items = [
       { type: "divider", adminOnly: true },
       link("create-timetable", "/create-timetable", "Create timetable"),
       link("cta", "/cta", "Timetable entries"),
+      link("teacher-workload", "/teacher-workload", "Teacher workload"),
     ],
   },
   link("calendar", "/calendar", "Calendar"),

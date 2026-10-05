@@ -68,11 +68,22 @@ Admins cannot delete, disable or demote their own account.
 The menu is grouped by what people do; each user only sees the pages they can open:
 
 - **Checklists**: My checklists, Reviews (admins and coordinators), and for admins Manage checklists and Progress.
-- **Timetables**: the class, students and teachers timetables, and for admins Create timetable and Timetable entries.
+- **Timetables**: the class, students and teachers timetables, and for admins Create timetable, Timetable entries and Teacher workload.
 - **Calendar**: the school calendar.
 - **Setup** (admins): School, Teachers, Subjects, Classes, Periods, Teaching assignments and Users.
 
 The signed-in user's name (or username) is shown on the right; click it to see the role and sign out. After signing in, admins start at the class timetable and teachers at My checklists.
+
+## Teacher workload
+
+The **Teacher workload** page (Timetables menu, admins only) counts each teacher's lessons in the timetable, to help spread the load evenly. One lesson in the timetable is one period; breaks are not counted. Weekday periods are Monday to Friday and weekend periods Saturday and Sunday; hours come from each period's start and end times.
+
+- **Load per teacher**: a bar per teacher, weekday and weekend stacked, with the school average marked. The average is taken over teachers with at least one period; a teacher more than 20% above it is **Over**, more than 20% below is **Under**, otherwise **Balanced**.
+- **Teachers**: subjects, classes, weekday, weekend and total periods, hours, free periods (out of the week's lesson slots: days × lesson periods), load %, busiest day and load status, with totals. Expand a teacher for their periods by subject and class.
+- **Periods per day**: a teacher × day grid that shows uneven weeks.
+- **Assigned but not in the timetable**: teaching assignments with no lessons yet.
+
+Filter by teacher, subject, class and load status. **Download Excel** saves the teachers shown as an Excel file with three sheets: Summary (one row per teacher, with the school average and capacity), Detail (teacher, subject, class, weekday, weekend, total and hours, with a total per teacher) and By day.
 
 ## Managing data
 
